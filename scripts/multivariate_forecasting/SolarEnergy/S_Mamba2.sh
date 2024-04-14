@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=2
 
 model_name=S_Mamba
 
-python -u run.py \
+python -u test_run.py \
   --is_training 1 \
   --root_path ./kaggle/input/solar-al/ \
   --data_path solar_AL.txt \
