@@ -1,12 +1,13 @@
 import os
 import torch
-from model import Transformer, Informer, Reformer, Flowformer, Flashformer, \
-    iTransformer, iInformer, iReformer, iFlowformer, iFlashformer, S_Mamba
+#from model import Transformer, Informer, Reformer, Flowformer, Flashformer, \
+#    iTransformer, iInformer, iReformer, iFlowformer, iFlashformer, S_Mamba
 
 
 class Exp_Basic(object):
     def __init__(self, args):
         self.args = args
+        """
         self.model_dict = {
             'Transformer': Transformer,
             'Informer': Informer,
@@ -20,6 +21,7 @@ class Exp_Basic(object):
             'iFlashformer': iFlashformer,
             'S_Mamba': S_Mamba,
         }
+        """
         self.device = self._acquire_device()
         self.model = self._build_model().to(self.device)
 
