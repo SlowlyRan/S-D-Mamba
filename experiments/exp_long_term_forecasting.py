@@ -10,7 +10,10 @@ import time
 import warnings
 import numpy as np
 from Models.ModelMLP import ModelMLP
-
+from Models.ModelLSTM import ModelLSTM
+from Models.ModelMLP2 import ModelMLP2
+from Models.ModelTranformer import Transformer
+from Models.Model3 import Model3
 
 warnings.filterwarnings('ignore')
 
