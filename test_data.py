@@ -3,7 +3,7 @@ from utils import Args
 import matplotlib.pyplot as plt
 
 arg = Args.Args(root_path=r"C:\Repo\pv_data\Data/")
-flag = "train"
+flag = "val"
 data_set, data_loader  = data_provider(arg, flag)
 
 #for x,y,xt,yt,xtt,ytt in data_set:
