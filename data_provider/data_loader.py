@@ -81,7 +81,7 @@ class Dataset_Custom(Dataset):
         df_stamp = df_raw[['date']][border1:border2]
 
         df_stamp['date'] = pd.to_datetime(df_stamp.date)
-        self.data_stamp_row = df_stamp.date.apply(self.data_stamp_trans, 1)
+        self.data_stamp_row = df_stamp.date.apply(self.data_stamp_trans, 1).values
         if self.timeenc == 0:
             df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
             df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
