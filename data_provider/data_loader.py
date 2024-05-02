@@ -129,5 +129,7 @@ class Dataset_Custom(Dataset):
         new_list = []
         for i in rows:
             new_list.append(datetime.datetime.fromtimestamp(i))
-        return new_list
+        outputs_np = np.array(new_list)
+
+        return outputs_np
 
