@@ -6,9 +6,13 @@ arg = Args.Args(root_path=r"C:\Repo\pv_data\Data/")
 flag = "whole"
 data_set, data_loader  = data_provider(arg, flag)
 
-for i, (batch_x, batch_y, batch_x_mark, batch_y_mark,xtt,ytt) in enumerate(data_loader):
+for i, (batch_x, batch_y, batch_x_mark, batch_y_mark,xtt,ytt) in enumerate(data_set):
 #for x,y,xt,yt,xtt,ytt in data_set:
 #for x, y, xt, yt in data_set:
+    print(batch_x.shape)
+    print(batch_y.shape)
+    print(batch_x_mark.shape)
+    print(batch_y_mark.shape)
 
     tt = ytt
     break

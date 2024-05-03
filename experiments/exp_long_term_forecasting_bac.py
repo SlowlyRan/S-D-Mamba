@@ -9,7 +9,6 @@ import os
 import time
 import warnings
 import numpy as np
-import pandas as pd
 from Models.ModelMLP import ModelMLP
 from Models.ModelLSTM import ModelLSTM
 from Models.ModelMLP2 import ModelMLP2
@@ -205,7 +204,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
         return self.model
 
-    def test(self, setting, test=1):
+    def test(self, setting, test=0):
         test_data, test_loader = self._get_data(flag='test')
         if test:
             print('loading model')
@@ -226,6 +225,18 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 batch_y = batch_y.float().to(self.device)
                 x_t = batch_y[:, -self.args.pred_len:, 0:-1]
                 y_t = batch_y_mark[:, -self.args.pred_len:, :].float().to(self.device)
+                # time_points = random.sample(range(batch_x.size()[1]), 5)
+                # 假设您有一个包含每个变量标准差的张量stds，形状为(321,)
+                # 定义扰动强度
+                # epsilon = 1
+                # # 创建一个与原始张量形状相同的张量来存储扰动
+                # perturbed_tensor = torch.zeros_like(batch_x)
+                # # 对每个选定的时间点添加扰动
+                # for time_point in time_points:
+                #     # 生成与tensor在该时间点形状相同的随机噪声
+                #     noise = torch.randn(1, 321) * epsilon
+                #     perturbed_tensor[:, time_point, :] += noise.float().to(self.device)
+                # batch_x += perturbed_tensor
                 if 'PEMS' in self.args.data or 'Solar' in self.args.data:
                     batch_x_mark = None
                     batch_y_mark = None
@@ -233,8 +244,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     batch_x_mark = batch_x_mark.float().to(self.device)
                     batch_y_mark = batch_y_mark.float().to(self.device)
 
+                # decoder input
                 dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+                # encoder - decoder
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
                         if self.args.output_attention:
@@ -309,8 +322,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         folder_path = './results/' + setting + '/'
         np.save(folder_path + 'input.npy', inputs)
 
-    def predict(self, setting, load=True):
-        pred_data, pred_loader = self._get_data(flag='whole')
+    def predict(self, setting, load=False):
+        pred_data, pred_loader = self._get_data(flag='pred')
 
         if load:
             path = os.path.join(self.args.checkpoints, setting)
@@ -318,56 +331,48 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             self.model.load_state_dict(torch.load(best_model_path))
 
         preds = []
-        time_stamp = []
-        trues = []
-        preds_0 = []
-        trues_0 = []
 
         self.model.eval()
         with torch.no_grad():
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark, xtt, ytt) in enumerate(pred_loader):
+            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float()
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
-
                 x_t = batch_y[:, -self.args.pred_len:, 0:-1].to(self.device)
                 y_t = batch_y_mark[:, -self.args.pred_len:, :].to(self.device)
-                ytt = ytt.numpy()
 
-                outputs = self.model(batch_x, batch_x_mark, [], batch_y_mark, x_t, y_t)
-                f_dim = -1
-                outputs = outputs[:, -self.args.pred_len:]
-                y_stamp = ytt[:, -self.args.pred_len:]
-                batch_y = batch_y[:, -self.args.pred_len:, f_dim].to(self.device)
+                # decoder input
+                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+                # encoder - decoder
+                if self.args.use_amp:
+                    with torch.cuda.amp.autocast():
+                        if self.args.output_attention:
+                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, x_t, y_t)[0]
+                        else:
+                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, x_t, y_t)
+                else:
+                    if self.args.output_attention:
+                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, x_t, y_t)[0]
+                    else:
+                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, x_t, y_t)
+                # outputs = filter_layer(outputs)
                 outputs = outputs.detach().cpu().numpy()
-                batch_y = batch_y.detach().cpu().numpy()
-                preds_0.append(outputs)
-                trues_0.append(batch_y)
-                outputs = pred_data.inverse_transform(outputs)
-                batch_y = pred_data.inverse_transform(batch_y)
+                if pred_data.scale and self.args.inverse:
+                    shape = outputs.shape
+                    outputs = pred_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                 preds.append(outputs)
-                trues.append(batch_y)
-                time_stamp.append(y_stamp[0])
-        preds = np.concatenate(preds)
-        trues = np.concatenate(trues)
-        pred0 = np.concatenate(preds_0, axis=1)[0]
-        true0 = np.concatenate(trues_0, axis=1)[0]
-        time_stamp = np.concatenate(time_stamp)
-        y_stamp = pred_data.data_stamp_reverse(time_stamp)
-        y_stamp = pd.DataFrame(y_stamp, columns=["date"])
-        preds = pd.DataFrame(preds, columns=["pred"])
-        trues = pd.DataFrame(trues, columns=["true"])
-        preds0 = pd.DataFrame(pred0, columns=["pred0"])
-        trues0 = pd.DataFrame(true0, columns=["true0"])
-        result = pd.concat([y_stamp, preds, trues, preds0, trues0], axis=1)
+
+        preds = np.array(preds)
+        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+        print("pp")
 
         # result save
-        folder_path = './results2/' + setting + '/'
+        folder_path = './results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-        path = folder_path + 'result.csv'
-        result.to_csv(path)
+
+        np.save(folder_path + 'real_prediction.npy', preds)
 
         return
-
