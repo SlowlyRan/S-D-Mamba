@@ -33,7 +33,7 @@ class Args:
                  itr=1,
                  train_epochs=50,
                  batch_size=32,
-                 patience=5,
+                 patience=3,
                  learning_rate=0.0001,
                  des='Exp',
                  loss='MSE',
