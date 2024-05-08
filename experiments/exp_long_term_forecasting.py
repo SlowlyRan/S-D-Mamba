@@ -330,12 +330,14 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 batch_y = batch_y.float()
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
+                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
                 x_t = batch_y[:, -self.args.pred_len:, 0:-1].to(self.device)
                 y_t = batch_y_mark[:, -self.args.pred_len:, :].to(self.device)
                 ytt = ytt.numpy()
 
-                outputs = self.model(batch_x, batch_x_mark, [], batch_y_mark, x_t, y_t)
+                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, x_t, y_t)
                 f_dim = -1
                 outputs = outputs[:, -self.args.pred_len:]
                 y_stamp = ytt[:, -self.args.pred_len:]
@@ -363,7 +365,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         result = pd.concat([y_stamp, preds, trues, preds0, trues0], axis=1)
 
         # result save
-        folder_path = './results2/' + setting + '/'
+        folder_path = './results2/' + self.args.model_id + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         path = folder_path + 'result.csv'
