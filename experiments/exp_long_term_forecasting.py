@@ -264,6 +264,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
                 preds.append(pred)
                 trues.append(true)
+                """
                 if i % 20 == 0:
                     input = batch_x.detach().cpu().numpy()
                     if test_data.scale and self.args.inverse:
@@ -272,6 +273,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     gt = np.concatenate((input[0, :, -1], true[0, :]), axis=0)
                     pd = np.concatenate((input[0, :, -1], pred[0, :]), axis=0)
                     visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+                """
 
         preds = np.array(preds)
         trues = np.array(trues)
@@ -365,7 +367,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         result = pd.concat([y_stamp, preds, trues, preds0, trues0], axis=1)
 
         # result save
-        folder_path = './results2/' + self.args.model_id + '/'
+        folder_path = './results2/' + self.args.data_path + '/'+ self.args.model_id + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         path = folder_path + 'result.csv'
